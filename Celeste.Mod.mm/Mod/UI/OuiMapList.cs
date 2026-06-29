@@ -1,10 +1,12 @@
-﻿using FMOD.Studio;
+﻿using Celeste.Mod.Core;
+using FMOD.Studio;
 using Microsoft.Xna.Framework;
 using Monocle;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Celeste.Mod.UI {
     public class OuiMapList : Oui {
@@ -23,6 +25,8 @@ namespace Celeste.Mod.UI {
 
         private int type = 2;
         private int side = 0;
+        private bool showHidden = false;
+        private bool edited = false;
 
         private List<TextMenuExt.IItemExt> items = new List<TextMenuExt.IItemExt>();
 
@@ -70,19 +74,25 @@ namespace Celeste.Mod.UI {
                 ReloadItems();
             }));
 
+            menu.Add(new TextMenu.OnOff(Dialog.Clean("maplist_showhidden"), showHidden).Change(value => {
+                showHidden = value;
+                ReloadItems();
+            }));
+
             menu.Add(new TextMenu.Button(Dialog.Clean("maplist_search")).Pressed(() => {
                 Overworld.Goto<OuiMapSearch>();
             }));
 
-            menu.Add(new patch_TextMenu.patch_SubHeader(Dialog.Clean("maplist_list")));
+            // menu.Add(new patch_TextMenu.patch_SubHeader(Dialog.Clean("maplist_list")));
+            // keep this or nah? imo it looks a little weird having 2 headings right next to each other
 
             ReloadItems();
 
             return menu;
         }
 
-        private void ReloadItems() {
-            ((patch_TextMenu) menu).BatchMode = true;
+        private void ReloadItems(float delay = 0.03f) {
+            menu.BatchMode = true;
 
             foreach (TextMenu.Item item in items)
                 menu.Remove(item);
@@ -102,12 +112,20 @@ namespace Celeste.Mod.UI {
             int levelSetUnlockedModes = int.MaxValue;
             string name;
 
+            List<patch_AreaData> Hidden = new();
+
             SaveData save = SaveData.Instance;
             List<AreaStats> areaStatsAll = save.Areas;
             for (int i = 0; i < AreaData.Areas.Count; i++) {
                 patch_AreaData area = patch_AreaData.Get(i);
                 if (area == null || !area.HasMode((AreaMode) side))
                     continue;
+
+                bool isHidden = false;
+                if (CoreModule.Settings.HiddenMapOverrides.TryGetValue(area.SID, out bool value) == true)
+                    isHidden = value;
+                else
+                    isHidden = area.Meta?.Hidden ?? false;
 
                 // TODO: Make subchapters hidden by default in the map list, even in debug mode.
                 if (!save.DebugMode && !string.IsNullOrEmpty(area.Meta?.Parent))
@@ -117,53 +135,148 @@ namespace Celeste.Mod.UI {
 
                 if (type != 1 && ((filterSet == null && levelSet == "Celeste") || (filterSet != null && filterSet != levelSet)))
                     continue;
+                
+                if (isHidden) {
+                    if (showHidden)
+                        Hidden.Add(area);
+                    continue;
+                }
 
                 name = area.Name;
                 name = name.DialogCleanOrNull() ?? name.SpacedPascalCase();
 
                 if (lastLevelSet != levelSet) {
                     lastLevelSet = levelSet;
+
                     levelSetStats = patch_SaveData.Instance.GetLevelSetStatsFor(levelSet);
-                    levelSetAreaOffset = levelSetStats.AreaOffset;
-                    levelSetUnlockedAreas = levelSetStats.UnlockedAreas;
-                    levelSetUnlockedModes = levelSetStats.UnlockedModes;
+                    if (levelSetStats != null) {
+                        levelSetAreaOffset = levelSetStats.AreaOffset;
+                        levelSetUnlockedAreas = levelSetStats.UnlockedAreas;
+                        levelSetUnlockedModes = levelSetStats.UnlockedModes;
+                    } else {
+                        levelSetAreaOffset = 0;
+                        levelSetUnlockedAreas = int.MaxValue;
+                        levelSetUnlockedModes = int.MaxValue;
+                    }
+
                     string setname = patch_Dialog.CleanLevelSet(levelSet);
                     TextMenuExt.SubHeaderExt levelSetHeader = new TextMenuExt.SubHeaderExt(setname);
                     levelSetHeader.Alpha = 0f;
+                    
                     menu.Add(levelSetHeader);
                     items.Add(levelSetHeader);
                 }
 
-                TextMenuExt.ButtonExt button = new TextMenuExt.ButtonExt(name);
-                button.Alpha = 0f;
+                TextMenuExt.ButtonExt buttonMain = new TextMenuExt.ButtonExt(name);
+                buttonMain.Alpha = 0f;
 
                 if (area.Icon != "areas/null")
-                    button.Icon = area.Icon;
-                button.IconWidth = 64f;
+                    buttonMain.Icon = area.Icon;
+                buttonMain.IconWidth = 64f;
 
                 if (levelSet == "Celeste" && i > levelSetAreaOffset + levelSetUnlockedAreas)
-                    button.Disabled = true;
+                    buttonMain.Disabled = true;
                 if (side == 1 && !areaStatsAll[i].Cassette)
-                    button.Disabled = true;
+                    buttonMain.Disabled = true;
                 if (side >= 2 && levelSetUnlockedModes < (side + 1))
-                    button.Disabled = true;
+                    buttonMain.Disabled = true;
 
-                menu.Add(button.Pressed(() => {
+                buttonMain.Pressed(() => {
                     Inspect(area, (AreaMode) side);
-                }));
-                items.Add(button);
+                });
+
+                TextMenuExt.ButtonExt hideButton = new TextMenuExt.ButtonExt(""); 
+                hideButton.Alpha = 0f;
+                hideButton.Icon = "menu/hide_map";
+                hideButton.IconWidth = 12f;
+
+                hideButton.Pressed(() => {
+                    bool hiddenDefault = area.Meta?.Hidden ?? false;
+                    area.Hidden = true;
+                    if (!hiddenDefault)
+                        CoreModule.Settings.HiddenMapOverrides[area.SID] = true;
+                    else
+                        CoreModule.Settings.HiddenMapOverrides.Remove(area.SID);
+                    edited = true;
+                    ReloadItems(0);
+                });
+
+                TextMenuExt.MapList horizontalRow = new TextMenuExt.MapList();
+                horizontalRow.Add(buttonMain);
+
+                // stops people from complaining about "x map disappeared"
+                if (showHidden && levelSet != "Celeste")
+                    horizontalRow.Add(hideButton);
+
+                menu.Add(horizontalRow);
+                items.Add(horizontalRow);
+            }
+            if (showHidden && Hidden.Count > 0)
+            {
+                string setname = patch_Dialog.Get("MAPLIST_HIDDEN");
+                TextMenuExt.SubHeaderExt levelSetHeader = new TextMenuExt.SubHeaderExt(setname);
+                levelSetHeader.Alpha = 0f;
+                
+                menu.Add(levelSetHeader);
+                items.Add(levelSetHeader);
+                foreach (patch_AreaData area in Hidden) {
+                    name = area.Name;
+                    name = name.DialogCleanOrNull() ?? name.SpacedPascalCase();
+
+                    TextMenuExt.ButtonExt buttonMain = new TextMenuExt.ButtonExt(name);
+                    buttonMain.Alpha = 0f;
+
+                    if (area.Icon != "areas/null")
+                        buttonMain.Icon = area.Icon;
+                    buttonMain.IconWidth = 64f;
+
+                    buttonMain.Pressed(() => {
+                        Inspect(area, (AreaMode) side);
+                    });
+
+                    TextMenuExt.ButtonExt showButton = new TextMenuExt.ButtonExt(""); 
+                    showButton.Alpha = 0f;
+                    showButton.Icon = "menu/show_map";
+                    showButton.IconWidth = 12f;
+
+                    showButton.Pressed(() => {
+                        bool hiddenDefault = area.Meta?.Hidden ?? false;
+                        area.Hidden = false;
+                        if (hiddenDefault)
+                            CoreModule.Settings.HiddenMapOverrides[area.SID] = false;
+                        else
+                            CoreModule.Settings.HiddenMapOverrides.Remove(area.SID);
+                        edited = true;
+                        ReloadItems(0);
+                    });
+
+                    TextMenuExt.MapList horizontalRow = new TextMenuExt.MapList();
+                    horizontalRow.Add(buttonMain);
+
+                    horizontalRow.Add(showButton);
+
+                    menu.Add(horizontalRow);
+                    items.Add(horizontalRow);
+                }
             }
 
             ((patch_TextMenu) menu).BatchMode = false;
+
+            if (menu.Items.Count > 0)
+                menu.Selection = Math.Clamp(menu.Selection, menu.FirstPossibleSelection, menu.LastPossibleSelection);
             
             // compute a delay so that options don't take more than a second to show up if many mods are installed.
-            float delayBetweenOptions = 0.03f;
+            float delayBetweenOptions = delay;
             if (items.Count > 0)
-                delayBetweenOptions = Math.Min(0.03f, 1f / items.Count);
+                delayBetweenOptions = Math.Min(delay, 1f / items.Count);
 
             // Do this afterwards as the menu has now properly updated its size.
-            for (int i = 0; i < items.Count; i++)
-                Add(new Coroutine(FadeIn(i, delayBetweenOptions, items[i])));
+            if (delay > 0)
+                for (int i = 0; i < items.Count; i++)
+                    Add(new Coroutine(FadeIn(i, delayBetweenOptions, items[i])));
+            else
+                foreach (TextMenuExt.IItemExt item in items)
+                    item.Alpha = 1;
 
             if (menu.Height > menu.ScrollableMinSize) {
                 menu.Position.Y = menu.ScrollTargetY;
@@ -233,7 +346,8 @@ namespace Celeste.Mod.UI {
         public override IEnumerator Leave(Oui next) {
 
             menu.Focused = false;
-
+            if (edited)
+                UserIO.SaveHandler(file: false, settings: true);
             Audio.Play(SFX.ui_main_whoosh_large_out);
 
             if (Overworld != null) {
@@ -249,6 +363,7 @@ namespace Celeste.Mod.UI {
 
             menu.Visible = Visible = false;
             menu.RemoveSelf();
+            edited = false;
             menu = null;
         }
 

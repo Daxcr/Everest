@@ -1793,5 +1793,108 @@ namespace Celeste {
                 Input.GuiKey(Input.FirstKey(Input.QuickRestart)).Draw(searchIconLocation, Vector2.Zero, Color.White, scaleFactor);
             }
         }
+        public class MapList : TextMenu.Item, IItemExt {
+            public List<TextMenu.Item> Items = new List<TextMenu.Item>();
+            public int Selection = 0;
+            public float Spacing { get; set; } = 40f;
+            public Color TextColor { get; set; } = Color.White;
+            public string Icon { get; set; }
+            public float? IconWidth { get; set; }
+            public bool IconOutline { get; set; }
+            public Vector2 Offset { get; set; }
+            public float Alpha { get; set; } = 1f;
+
+            public MapList() {
+                Selectable = true;
+            }
+            public MapList Add(TextMenu.Item item) {
+                if (item != null) {
+                    Items.Add(item);
+                    item.Selectable = false;
+                }
+                return this;
+            }
+            public override void LeftPressed() {
+                if (Selection > 0) {
+                    Selection--;
+                    Audio.Play("event:/ui/main/button_toggle_off");
+                }
+            }
+
+            public override void RightPressed() {
+                if (Selection < Items.Count - 1) {
+                    Selection++;
+                    Audio.Play("event:/ui/main/button_toggle_on");
+                }
+            }
+
+            public override void ConfirmPressed() {
+                if (Selection >= 0 && Selection < Items.Count) {
+                    TextMenu.Item selected = Items[Selection];
+                    bool prev = selected.Selectable;
+                    selected.Selectable = true;
+                    selected.ConfirmPressed();
+                    selected.OnPressed?.Invoke();
+                    selected.Selectable = prev;
+                }
+            }
+
+            public override float Height() {
+                float maxHeight = 0;
+                foreach (TextMenu.Item item in Items) {
+                    if (item.Visible)
+                        maxHeight = Math.Max(maxHeight, item.Height());
+                }
+                return maxHeight;
+            }
+
+            public override float LeftWidth() {
+                float totalWidth = 0;
+                for (int i = 0; i < Items.Count; i++) {
+                    if (!Items[i].Visible) continue;
+                    
+                    if (i == 0 && Items[i] is ButtonExt button) {
+                        float textWidth = ActiveFont.Measure(button.Label).X;
+                        float iconPadding = !string.IsNullOrEmpty(button.Icon) ? (button.IconWidth ?? 0f) + 120f : 120f;
+                        totalWidth += textWidth + iconPadding;
+                    } else {
+                        totalWidth += Items[i].LeftWidth();
+                    }
+                }
+                return totalWidth + (Spacing * (Items.Count - 1));
+            }
+
+            public override void Render(Vector2 position, bool highlighted) {
+                position += Offset;
+                Vector2 currentPosition = position;
+
+                if (Container.InnerContent != TextMenu.InnerContentMode.TwoColumn) {
+                    float totalWidth = LeftWidth();
+                    currentPosition.X = position.X + (Container.Width * 0.5f) - (totalWidth * 0.5f);
+                }
+
+                for (int i = 0; i < Items.Count; i++) {
+                    if (!Items[i].Visible) continue;
+
+                    Items[i].Container = Container;
+                    
+                    if (Items[i] is IItemExt ext) {
+                        ext.Alpha = Alpha; 
+                    }
+
+                    bool itemHighlighted = highlighted && (i == Selection);
+                    
+                    Items[i].Render(currentPosition, itemHighlighted);
+
+                    if (i == 0 && Items[i] is ButtonExt button) {
+                        float textWidth = ActiveFont.Measure(button.Label).X;
+                        float iconPadding = !string.IsNullOrEmpty(button.Icon) ? (button.IconWidth ?? 0f) + 32f : 32f;
+                        currentPosition.X += textWidth + iconPadding + Spacing;
+                    } else {
+                        currentPosition.X += Items[i].LeftWidth() + Spacing;
+                    }
+                }
+            }
+        }
     }
 }

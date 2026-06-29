@@ -489,6 +489,9 @@ namespace Celeste.Mod.Core {
         public int ExampleInGameSlider { get; set; } = 5;
         */
 
+        [SettingIgnore]
+        public Dictionary<string, bool> HiddenMapOverrides { get; set; } = new();
+
         public void CreateInputGuiEntry(TextMenu menu, bool inGame) {
             // Get all Input GUI prefixes and add a slider for switching between them.
             List<string> inputGuiPrefixes = new List<string> {

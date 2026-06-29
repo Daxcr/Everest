@@ -31,6 +31,7 @@ namespace Celeste {
             { "C", AreaMode.CSide },
             { "X", AreaMode.CSide },
         };
+        public bool Hidden {get; set;} = false;
         private static void ParseName(string sid, out int? order, out AreaMode side, out string name) {
             int indexOfSlash = sid.Replace('\\', '/').LastIndexOf('/');
             if (indexOfSlash != -1)
@@ -299,8 +300,14 @@ namespace Celeste {
                     // Celeste levelset always appears first.
                     if (area.LevelSet == "Celeste")
                         Areas.Add(area);
-                    else
+                    else if (!meta.Hidden ?? true)
                         modAreas.Add(area);
+                    else
+                    {
+                        area.Hidden = true;
+                        modAreas.Add(area);
+                    }
+
 
                     // Some special handling.
                     area.OnLevelBegin = (level) => {
@@ -316,6 +323,7 @@ namespace Celeste {
 
             // Merge modAreas into Areas.
             Areas.AddRange(modAreas);
+            // Merge hiddenAreas into Areas last so it sits at the bottom.
 
             // Find duplicates and remove any earlier copies.
             for (int i = 0; i < Areas.Count; i++) {

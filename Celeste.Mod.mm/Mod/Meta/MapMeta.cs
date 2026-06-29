@@ -77,6 +77,8 @@ namespace Celeste.Mod.Meta {
 
         public MapMetaPostcard Postcard { get; set; }
 
+        public bool? Hidden { get; set; }
+
         public void Parse(BinaryPacker.Element meta) {
             meta.AttrIf("Parent", v => Parent = v);
 
@@ -117,6 +119,8 @@ namespace Celeste.Mod.Meta {
             meta.AttrIf("Sprites", v => Sprites = v);
             meta.AttrIf("Portraits", v => Portraits = v);
             meta.AttrIfBool("OverrideASideMeta", v => OverrideASideMeta = v);
+
+            meta.AttrIfBool("Hidden", v => Hidden = v);
 
             BinaryPacker.Element child;
 

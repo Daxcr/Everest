@@ -187,6 +187,9 @@
 	MAPLIST_TYPE_EVERYTHING=  Everything
 	MAPLIST_RESULTS_SINGULAR= {0} result found
 	MAPLIST_RESULTS_PLURAL=   {0} results found
+	MAPLIST_HIDDEN= Hidden
+	MAPLIST_SHOWHIDDEN= Show Hidden
+	MAPLIST_HIDE= Hide
 
 	LEVELSET_CELESTE= 		Celeste
 	LEVELSET_= 				Uncategorized
