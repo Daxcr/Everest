@@ -412,6 +412,8 @@ namespace Celeste.Mod.Core {
         }
 
         private Dictionary<string, LogLevel> _LogLevels = new Dictionary<string, LogLevel>();
+        public bool BetterModOptions;
+        public bool UnifyOptions;
 
         [SettingIgnore]
         public Dictionary<string, LogLevel> LogLevels {

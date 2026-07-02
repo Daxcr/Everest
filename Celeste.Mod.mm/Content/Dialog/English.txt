@@ -122,6 +122,7 @@
 	MODOPTIONS_COREMODULE_SOUNDTEST= 						Sound Test
 	MODOPTIONS_COREMODULE_OOBE= 							Redo Initial Setup
 	MODOPTIONS_COREMODULE_TOGGLEMODS=						Enable or Disable Mods
+	MODOPTIONS_COREMODULE_EXPERIMENTS=						Experiments
 
 	MODOPTIONS_COREMODULE_DISCORDRICHPRESENCE=				Discord Rich Presence
 	MODOPTIONS_COREMODULE_DISCORDRICHPRESENCEOPTIONS=		Rich Presence Options
@@ -335,6 +336,21 @@
 	MODOPTIONS_MODTOGGLE_DIRECTORIES=				Directories
 	MODOPTIONS_MODTOGGLE_BINS=						Map Bin Files
 	MODOPTIONS_MODTOGGLE_SEARCHBOX_PLACEHOLDER=		Press 'Tab' or 'Enter' to scroll to the next match
+
+# Experiments Menu
+	MODOPTIONS_EXPERIMENTS=							Experiments
+#	MODOPTIONS_EXPERIMENTS_DISCLAIM=				!! DANGER ZONE !!{n}These settings may be removed or change in the future.{n}Only toggle these if you know what you're doing.
+	MODOPTIONS_EXPERIMENTS_BETTERMODOPTIONS=		Revised Mod Options
+	MODOPTIONS_EXPERIMENTS_BETTERMODOPTIONS_DESCR=	Completely overhauls Everest's Mod Options menu
+	MODOPTIONS_EXPERIMENTS_UNIFYOPTIONS=			Unify Vanilla/Mod Options
+	MODOPTIONS_EXPERIMENTS_UNIFYOPTIONS_DESCR=		Merges the Revised Mod Options experiment into vanilla Celeste's options.
+
+# Global Options
+	MODOPTIONS_GLOBALOPTIONS_CELESTE=		Celeste Settings
+	MODOPTIONS_GLOBALOPTIONS_EVEREST=		Everest Settings
+	MODOPTIONS_GLOBALOPTIONS_BINDINGS=		Bindings
+	MODOPTIONS_GLOBALOPTIONS_MANAGEMODS=	Enable/Disable Mods
+	MODOPTIONS_GLOBALOPTIONS_MODS=			Mods
 
 # Asset Reload Helper
 	ASSETRELOADHELPER_RELOADINGMAP=			Reloading map

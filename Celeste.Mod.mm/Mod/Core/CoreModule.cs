@@ -327,6 +327,10 @@ namespace Celeste.Mod.Core {
                 menu.Insert(items.Count - 2, new TextMenu.Button(Dialog.Clean("modoptions_coremodule_togglemods")).Pressed(() => {
                     OuiModOptions.Instance.Overworld.Goto<OuiModToggler>();
                 }));
+
+                menu.Insert(items.Count - 2, new TextMenu.Button(Dialog.Clean("modoptions_coremodule_experiments")).Pressed(() => {
+                    OuiModOptions.Instance.Overworld.Goto<OuiExperiments>();
+                }));
             }
         }
 

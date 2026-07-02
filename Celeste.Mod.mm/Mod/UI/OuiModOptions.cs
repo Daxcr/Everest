@@ -283,6 +283,11 @@ namespace Celeste.Mod.UI {
         }
 
         public override IEnumerator Enter(Oui from) {
+            if (CoreModule.Settings.BetterModOptions) {
+                Overworld.Goto<OuiGlobalOptions>();
+                yield break;
+            }
+
             ReloadMenu();
 
             // restore selection if coming from a submenu.
@@ -304,6 +309,9 @@ namespace Celeste.Mod.UI {
         }
 
         public override IEnumerator Leave(Oui next) {
+            if (menu == null) {
+                yield break;
+            }
             Audio.Play(SFX.ui_main_whoosh_large_out);
             menu.Focused = false;
 
@@ -341,11 +349,7 @@ namespace Celeste.Mod.UI {
         }
 
         public override void Render() {
-            if (alpha > 0f)
-                Draw.Rect(-10f, -10f, 1940f, 1100f, Color.Black * alpha * 0.4f);
             base.Render();
         }
-
-
     }
 }
